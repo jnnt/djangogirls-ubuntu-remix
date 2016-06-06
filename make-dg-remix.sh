@@ -35,7 +35,6 @@ sudo apt-get install squashfs-tools
 # Fetching the Ubuntu DVD, or using existing one like done here
 export iso_file=lubuntu-16.04-desktop-amd64.iso
 
-### prepare resources to copy
 
 
 # Extracting image and chrooting into it
@@ -43,9 +42,9 @@ mkdir mnt
 sudo mount -o loop ${iso_file} mnt/
 mkdir extract-cd
 sudo rsync --exclude=/casper/filesystem.squashfs -a mnt/ extract-cd
-mkdir squashfs
-sudo mount -t squashfs -o loop mnt/casper/filesystem.squashfs squashfs
-mkdir edit
+# mkdir squashfs
+# sudo mount -t squashfs -o loop mnt/casper/filesystem.squashfs squashfs
+# mkdir edit
 # sudo cp -a squashfs/* edit/
 # I've not noticed difference in the end result, cp seems faster
 sudo unsquashfs mnt/casper/filesystem.squashfs
@@ -60,7 +59,10 @@ mount -t proc none /proc
 mount -t sysfs none /sys
 mount -t devpts none /dev/pts
 export HOME=/root
-export LC_ALL=C
+# export LC_ALL=C
+export LC_ALL=C.UTF-8
+export LANG=C.UTF-8
+
 
 # Installing the wanted language support, optionally first removing non-wanted
 # packages. We're far beyond 700MB limit anyway, the next sensible limit to
@@ -79,17 +81,13 @@ PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin
 # Update repository information to find current packages
 DEBIAN_FRONTEND=noninteractive apt update
 
-DEBIAN_FRONTEND=noninteractive apt upgrade -y
+# DEBIAN_FRONTEND=noninteractive apt upgrade -y
 DEBIAN_FRONTEND=noninteractive apt install -y build-essential libssl-dev libcurl4-gnutls-dev libexpat1-dev gettext
-DEBIAN_FRONTEND=noninteractive apt install -y bzip2 curl git rsync tree wget vim
+DEBIAN_FRONTEND=noninteractive apt install -y bzip2 curl git rsync tree wget vim emacs
 DEBIAN_FRONTEND=noninteractive apt install -y liblz4-tool
 # Polish (basic support)
 DEBIAN_FRONTEND=noninteractive apt install -y language-pack-pl language-pack-pl-base language-pack-gnome-pl language-pack-gnome-pl-base
 #
-
-DEBIAN_FRONTEND=noninteractive apt install -y vim emacs
-# install git
-DEBIAN_FRONTEND=noninteractive apt install -y git
 
 # i like synapse
 DEBIAN_FRONTEND=noninteractive apt install -y synapse
@@ -107,7 +105,7 @@ rm -f google-chrome-stable_current_amd64.deb
 # atom
 DEBIAN_FRONTEND=noninteractive apt install -y gvfs-bin
 curl -L https://atom.io/download/deb > atom-amd64.deb
-dpkg --install atom-amd64.deb
+DEBIAN_FRONTEND=noninteractive dpkg --install atom-amd64.deb
 DEBIAN_FRONTEND=noninteractive apt install -y -f
 rm -f /home/vagrant/atom-amd64.deb
 
@@ -116,10 +114,10 @@ DEBIAN_FRONTEND=noninteractive apt install -y gedit
 
 ############# DJANGO GIRLS WORKSHOP RESOURCES
 ##### python 3.5 #######
-DEBIAN_FRONTEND=noninteractive apt install -y python3-venv python3-pip virtualenv
+DEBIAN_FRONTEND=noninteractive apt install -y python3-venv python3-pip virtualenv libxml2-dev libxslt1-dev
 mkdir /usr/share/djangogirls
 cd /usr/share/djangogirls
-mkdir wheelhouse
+mkdir -p wheelhouse
 pip3 wheel Django==1.8 --wheel-dir wheelhouse  # still present in some versions of the tutorial
 pip3 wheel Django==1.9 --wheel-dir wheelhouse
 pip3 wheel ipython ipdb --wheel-dir wheelhouse
@@ -130,14 +128,16 @@ git clone https://github.com/jnnt/djangogirls_usbgenerator.git
 cd djangogirls_usbgenerator
 python3 -m venv venv
 source venv/bin/activate
+pip install wheel
 pip install -e .
 djangogirls_usbgenerator --all-langs --all --skip-apps
-mkdir ../tutorial && cd ../tutorial
-mv ../djangogirls_usbgenerator/downloads/*.pdf .
-mkdir ../webtools && cd ../webtools
-mv ../djangogirls_usbgenerator/downloads/* .
+mkdir -p tutorial
+mv downloads/*.pdf tutorial
+mv downloads webtools
+
 cd /usr/share/djangogirls
 rm -rf djangogirls_usbgenerator
+
 
 #############################################################################################
 # Cleanups
@@ -158,35 +158,13 @@ DEBIAN_FRONTEND=noninteractive apt purge -y locate
 # delete old dev libraries
 DEBIAN_FRONTEND=noninteractive dpkg -l | grep -- '-dev' | xargs apt purge -y
 
-# the history isn't needed
-DEBIAN_FRONTEND=noninteractive unset HISTFILE
-DEBIAN_FRONTEND=noninteractive rm -f /root/.bash_history
-DEBIAN_FRONTEND=noninteractive rm -f /home/vagrant/.bash_history
+# # the history isn't needed
+# DEBIAN_FRONTEND=noninteractive unset HISTFILE
+# DEBIAN_FRONTEND=noninteractive rm -f /root/.bash_history
+# DEBIAN_FRONTEND=noninteractive rm -f /home/vagrant/.bash_history
 
 # log files
 DEBIAN_FRONTEND=noninteractive find /var/log -type f | while read f; do echo -ne '' > $f; done;
-
-echo 'Whiteout root'
-DEBIAN_FRONTEND=noninteractive count=`df --sync -kP / | tail -n1  | awk -F ' ' '{print $4}'`;
-DEBIAN_FRONTEND=noninteractive count=$((count-1))
-DEBIAN_FRONTEND=noninteractive dd if=/dev/zero of=/tmp/whitespace bs=1024 count=$count;
-DEBIAN_FRONTEND=noninteractive rm /tmp/whitespace;
-
-echo 'Whiteout /boot'
-DEBIAN_FRONTEND=noninteractive count=`df --sync -kP /boot | tail -n1 | awk -F ' ' '{print $4}'`;
-DEBIAN_FRONTEND=noninteractive count=$((count-1))
-DEBIAN_FRONTEND=noninteractive dd if=/dev/zero of=/boot/whitespace bs=1024 count=$count;
-DEBIAN_FRONTEND=noninteractive rm /boot/whitespace;
-
-DEBIAN_FRONTEND=noninteractive swappart=`cat /proc/swaps | tail -n1 | awk -F ' ' '{print $1}'`
-DEBIAN_FRONTEND=noninteractive swapoff $swappart;
-DEBIAN_FRONTEND=noninteractive dd if=/dev/zero of=$swappart;
-DEBIAN_FRONTEND=noninteractive mkswap $swappart;
-DEBIAN_FRONTEND=noninteractive swapon $swappart;
-
-# zero all empty space
-DEBIAN_FRONTEND=noninteractive dd if=/dev/zero of=/EMPTY bs=1M
-DEBIAN_FRONTEND=noninteractive rm -f /EMPTY
 
 # TODO: /var/lib/dpkg/info? it's already populated, not allowed to be cleaned
 rm -rf /tmp/*
@@ -201,16 +179,37 @@ umount /dev/pts
 exit
 sudo umount edit/dev
 
-# setting default language
-# 16.04 LTS: seems broken (for legacy boot mode), no known solution. English is still the default.
-echo fi | sudo tee extract-cd/isolinux/lang
+# modify some resources
+sudo cp resources/casper.conf edit/etc/
+sudo cp resources/dg_logo_bg.png edit/usr/share/lubuntu/wallpapers
+sudo cp edit/usr/share/lubuntu/wallpapers/lubuntu-default-wallpaper.png edit/usr/share/lubuntu/wallpapers/lubuntu-default-wallpaper-orig.png
+# TODO configure wallpaper in /etc/skel
+sudo cp edit/usr/share/lubuntu/wallpapers/dg_logo_bg.png edit/usr/share/lubuntu/wallpapers/lubuntu-default-wallpaper.png
 
+sudo mkdir edit/etc/skel/Desktop
+sudo cp edit/usr/share/applications/lxterminal.desktop edit/etc/skel/Desktop
+sudo cp edit/usr/share/applications/firefox.desktop edit/etc/skel/Desktop
+sudo sed -i 's@Exec=firefox %u@Exec=firefox https://tutorial.djangogirls.org@' edit/etc/skel/Desktop/firefox.desktop
+sudo cp edit/usr/share/applications/google-chrome.desktop edit/etc/skel/Desktop
+sudo sed -i 's@Exec=google-chrome %u@Exec=google-chrome https://tutorial.djangogirls.org@' edit/etc/skel/Desktop/google-chrome.desktop
+
+sudo cp edit/usr/share/applications/leafpad.desktop edit/etc/skel/Desktop
+sudo cp edit/usr/share/applications/gedit.desktop edit/etc/skel/Desktop
+sudo cp edit/usr/share/applications/atom.desktop edit/etc/skel/Desktop
+sudo cp resources/djangogirls-offline-files.desktop edit/etc/skel/Desktop
+sudo chmod +x edit/etc/skel/Desktop
+
+
+
+# sudo sed -i 's/lubuntu-default-wallpaper.png/dg_logo_bg.png/' edit/etc/lxdm/default.conf
 # Translating Examples desktop icon in live mode LP: #441986 -> FIXED
 
 # Re-creation of "manifest" file
 sudo -s
 chmod +w extract-cd/casper/filesystem.manifest
 chroot edit dpkg-query -W --showformat='${Package} ${Version}\n' > extract-cd/casper/filesystem.manifest
+
+
 # 10+ packages are not part of the finished installation
 # earlier it was tried to recreate filesystem.manifest-desktop
 # but that caused too many packages to get installed
@@ -223,28 +222,26 @@ chroot edit dpkg-query -W --showformat='${Package} ${Version}\n' > extract-cd/ca
 # Pack the filesystem
 mksquashfs edit extract-cd/casper/filesystem.squashfs
 # Create the disk image itself
-export output_file=ubuntu-16.04-desktop-amd64-finnishremix.iso
-#export IMAGE_NAME="Ubuntu 12.04 LTS \"Precise Pangolin\""
+export output_file=lubuntu-16.04-desktop-amd64-djangogirls-remix.iso
 export IMAGE_NAME="Ubuntu 16.04 LTS"
-sed -i -e "s/$IMAGE_NAME/$IMAGE_NAME (Finnish Remix)/" extract-cd/README.diskdefines
-sed -i -e "s/$IMAGE_NAME/$IMAGE_NAME (Finnish Remix)/" extract-cd/.disk/info
-# NOTE: 14.04.3 official amd64 image has "Beta", one can change that to "Release"
+sed -i -e "s/$IMAGE_NAME/$IMAGE_NAME (Django Girls Remix)/" extract-cd/README.diskdefines
+sed -i -e "s/$IMAGE_NAME/$IMAGE_NAME (Django Girls Remix)/" extract-cd/.disk/info
 
 cd extract-cd
 # Localizing the UEFI boot
-sed -i '6i    loadfont /boot/grub/fonts/unicode.pf2' boot/grub/grub.cfg
-sed -i '7i    set locale_dir=$prefix/locale' boot/grub/grub.cfg
-sed -i '8i    set lang=fi_FI' boot/grub/grub.cfg
-sed -i '9i    insmod gettext' boot/grub/grub.cfg
-sed -i 's%splash%splash locale=fi_FI console-setup/layoutcode=fi%' boot/grub/grub.cfg
-sed -i 's/Try Ubuntu without installing/Kokeile Ubuntua asentamatta/' boot/grub/grub.cfg
-sed -i 's/Install Ubuntu/Asenna Ubuntu/' boot/grub/grub.cfg
-sed -i 's/OEM install (for manufacturers)/OEM-asennus (laitevalmistajille)/' boot/grub/grub.cfg
-sed -i 's/Check disc for defects/Tarkista asennusmedian eheys/' boot/grub/grub.cfg
-mkdir -p boot/grub/locale/
-mkdir -p boot/grub/fonts/
-cp -a /boot/grub/locale/fi.mo boot/grub/locale/
-cp -a /boot/grub/fonts/unicode.pf2 boot/grub/fonts/
+# sed -i '6i    loadfont /boot/grub/fonts/unicode.pf2' boot/grub/grub.cfg
+# sed -i '7i    set locale_dir=$prefix/locale' boot/grub/grub.cfg
+# sed -i '8i    set lang=pl_PL' boot/grub/grub.cfg
+# sed -i '9i    insmod gettext' boot/grub/grub.cfg
+# sed -i 's%splash%splash locale=pl_PL console-setup/layoutcode=pl%' boot/grub/grub.cfg
+# sed -i 's/Try Ubuntu without installing/Wypróbuj Ubuntu bez instalowania/' boot/grub/grub.cfg
+# sed -i 's/Install Ubuntu/Zainstaluj Ubuntu/' boot/grub/grub.cfg
+# sed -i 's/OEM install (for manufacturers)/Instalacja OEM dla producentów sprzętu/' boot/grub/grub.cfg
+# sed -i 's/Check disc for defects/Sprawdź dysk/' boot/grub/grub.cfg
+# mkdir -p boot/grub/locale/
+# mkdir -p boot/grub/fonts/
+# cp -a /boot/grub/locale/pl.mo boot/grub/locale/
+# cp -a /boot/grub/fonts/unicode.pf2 boot/grub/fonts/
 
 rm -f md5sum.txt
 (find -type f -print0 | xargs -0 md5sum | grep -v isolinux/boot.cat | sudo tee ../md5sum.txt)
@@ -252,9 +249,7 @@ mv -f ../md5sum.txt ./
 # If the following is not done, causes an error in the boot menu disk check option
 sed -i -e '/isolinux/d' md5sum.txt
 # Different volume name than the IMAGE_NAME above. On the official image it's of the type Ubuntu 12.04 LTS amd64
-export IMAGE_NAME="Ubuntu 16.04 LTS amd64 fi"
-# 14.04 LTS
-#mkisofs -r -V "$IMAGE_NAME" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -o ../${output_file} .
+export IMAGE_NAME="Ubuntu 16.04 LTS amd64 dg-remix"
 # 16.04 LTS
 genisoimage -r -V "$IMAGE_NAME" -cache-inodes -J -l -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e boot/grub/efi.img -no-emul-boot -o ../${output_file} .
 cd ..
@@ -262,13 +257,3 @@ isohybrid --uefi ${output_file}
 umount squashfs/
 umount mnt/
 exit
-
-
-
-# not in use, a more difficult way of setting the default language in boot menu
-## apt source gfxboot-theme-ubuntu gfxboot dpkg-dev
-## apt-get build-dep gfxboot-theme-ubuntu
-## cd gfxboot-theme-ubuntu*/
-## make DEFAULT_LANG=fi
-## sudo cp -a boot/* ../extract-cd/isolinux/
-## sudo cp -a langlist ../extract-cd/isolinux/
