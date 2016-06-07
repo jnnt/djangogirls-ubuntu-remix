@@ -30,8 +30,14 @@ We start from official Lubuntu ISO, install packages, add some resources and gen
 
 I tested this only on a Linux host.
 Carefully execute contents of the `make-dg-remix.sh` script by copy-pasting commands to your terminal :]
-You need `sudo` rights on your system, as you'll be making a `chroot` environment.
+
+You need sudo rights on your system, as you'll be making a `chroot` environment.
 
 ## TODO
 
 * whoa...
+* a pretty wallpaper
+* add more flavour to the distro - make a splash, change live session username and hostname (this requires modifying initrd) etc
+* consider adding persistent storage
+* either remove installation option or work on it
+* this a work in progress and I don't know where this project should be going: issues and PRs are very welcome :)
