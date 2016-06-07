@@ -28,7 +28,7 @@ echo
 read
 exit
 
-sudo apt-get install squashfs-tools
+sudo apt-get install squashfs-tools syslinux-utils
 
 # You may ignore all extra comment lines.
 
@@ -36,16 +36,17 @@ sudo apt-get install squashfs-tools
 export iso_file=lubuntu-16.04-desktop-amd64.iso
 
 
-
 # Extracting image and chrooting into it
 mkdir mnt
 sudo mount -o loop ${iso_file} mnt/
 mkdir extract-cd
 sudo rsync --exclude=/casper/filesystem.squashfs -a mnt/ extract-cd
+
 # mkdir squashfs
 # sudo mount -t squashfs -o loop mnt/casper/filesystem.squashfs squashfs
 # mkdir edit
 # sudo cp -a squashfs/* edit/
+
 # I've not noticed difference in the end result, cp seems faster
 sudo unsquashfs mnt/casper/filesystem.squashfs
 sudo mv squashfs-root edit
@@ -63,19 +64,6 @@ export HOME=/root
 export LC_ALL=C.UTF-8
 export LANG=C.UTF-8
 
-
-# Installing the wanted language support, optionally first removing non-wanted
-# packages. We're far beyond 700MB limit anyway, the next sensible limit to
-# keep under is 1GB (so that fits on 1GB USB memory).
-#apt-get remove --purge language-pack-bn language-pack-bn-base language-pack-gnome-bn language-pack-gnome-bn-base language-pack-es language-pack-es-base language-pack-gnome-es language-pack-gnome-es-base language-pack-pt language-pack-pt-base language-pack-gnome-pt language-pack-gnome-pt-base language-pack-xh language-pack-xh-base language-pack-gnome-xh language-pack-gnome-xh-base language-pack-hi language-pack-hi-base language-pack-gnome-hi language-pack-gnome-hi-base language-pack-de language-pack-de-base language-pack-fr language-pack-fr-base language-pack-gnome-de language-pack-gnome-de-base language-pack-gnome-fr language-pack-gnome-fr-base firefox-locale-bn firefox-locale-de firefox-locale-es firefox-locale-pt language-pack-gnome-zh-hans language-pack-gnome-zh-hans-base language-pack-zh-hans language-pack-zh-hans-base firefox-locale-zh-hans
-
-# BEGIN XXX THIS IS THE ONLY NON-COPYPASTEABLE PART OF THIS FILE XXX
-#
-# You may need (read: you do need) to add "nameserver 8.8.8.8" to the file
-# /run/resolvconf/resolv.conf temporarily. Preferably remove the line to
-# restore original (empty) content afterwards.
-#
-# END   XXX THIS IS THE ONLY NON-COPYPASTEABLE PART OF THIS FILE XXX
 
 PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin
 # Update repository information to find current packages
@@ -158,10 +146,6 @@ DEBIAN_FRONTEND=noninteractive apt purge -y locate
 # delete old dev libraries
 DEBIAN_FRONTEND=noninteractive dpkg -l | grep -- '-dev' | xargs apt purge -y
 
-# # the history isn't needed
-# DEBIAN_FRONTEND=noninteractive unset HISTFILE
-# DEBIAN_FRONTEND=noninteractive rm -f /root/.bash_history
-# DEBIAN_FRONTEND=noninteractive rm -f /home/vagrant/.bash_history
 
 # log files
 DEBIAN_FRONTEND=noninteractive find /var/log -type f | while read f; do echo -ne '' > $f; done;
@@ -199,26 +183,12 @@ sudo cp edit/usr/share/applications/atom.desktop edit/etc/skel/Desktop
 sudo cp resources/djangogirls-offline-files.desktop edit/etc/skel/Desktop
 sudo chmod +x edit/etc/skel/Desktop
 
-
-
 # sudo sed -i 's/lubuntu-default-wallpaper.png/dg_logo_bg.png/' edit/etc/lxdm/default.conf
-# Translating Examples desktop icon in live mode LP: #441986 -> FIXED
 
 # Re-creation of "manifest" file
 sudo -s
 chmod +w extract-cd/casper/filesystem.manifest
 chroot edit dpkg-query -W --showformat='${Package} ${Version}\n' > extract-cd/casper/filesystem.manifest
-
-
-# 10+ packages are not part of the finished installation
-# earlier it was tried to recreate filesystem.manifest-desktop
-# but that caused too many packages to get installed
-# (of which at least casper caused side effects ie ramzswap)
-# Trial & error with Lucid 10.04.1 lead to using the original
-# filesystem.manifest-desktop without changes, which works!
-# (apparently the language support system takes care of the
-# changed packages)
-#
 # Pack the filesystem
 mksquashfs edit extract-cd/casper/filesystem.squashfs
 # Create the disk image itself
@@ -228,6 +198,7 @@ sed -i -e "s/$IMAGE_NAME/$IMAGE_NAME (Django Girls Remix)/" extract-cd/README.di
 sed -i -e "s/$IMAGE_NAME/$IMAGE_NAME (Django Girls Remix)/" extract-cd/.disk/info
 
 cd extract-cd
+
 # Localizing the UEFI boot
 # sed -i '6i    loadfont /boot/grub/fonts/unicode.pf2' boot/grub/grub.cfg
 # sed -i '7i    set locale_dir=$prefix/locale' boot/grub/grub.cfg
